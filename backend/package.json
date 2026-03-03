@@ -1,0 +1,27 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@clerk/express": "^1.7.75",
+    "axios": "^1.13.5",
+    "cloudinary": "^2.9.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "inngest": "^3.52.4",
+    "mongoose": "^9.2.3",
+    "nodemon": "^3.1.14",
+    "stripe": "^20.4.0",
+    "svix": "^1.86.0"
+  }
+}
