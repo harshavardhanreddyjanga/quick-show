@@ -9,19 +9,20 @@ export const stripeWebhooks = async (request , response)=>{
      try {
         event = stripeInstance.webhooks.constructEvent(request.body,sig,process.env.STRIPE_WEBHOOK_SECRET)
      } catch (error) {
-        return response.status(400).send(`Webhhok error : ${error.message}`)
+        return response.status(400).send(`Webhook error : ${error.message}`)
      }
 
      try {
         
         switch (event.type) {
-            case "payment_intent.succeeded": {
+            case  "payment_intent.succeeded": {
                 const paymentIntent  = event.data.object;
-                const sessionList = await stripeInstance.checkout.sessions({
+                const sessionList = await stripeInstance.checkout.sessions.list({
                     payment_intent : paymentIntent.id
                 })
                 const session = sessionList.data[0];
                 const { bookingId } = session.metadata;
+                console.log(bookingId);
                 await Booking.findByIdAndUpdate(bookingId,{
                     isPaid : true,
                     paymentLink : "",
@@ -32,10 +33,10 @@ export const stripeWebhooks = async (request , response)=>{
                 console.log("unhandled event type" , event.type)
         }
         response.json({
-            recieved : true
+            received : true
         })
      } catch (error) {
-        console.log("webhook processing error",err);
+        console.log("webhook processing error",error);
         response.status(500).send('Internal server error')
      }
 
