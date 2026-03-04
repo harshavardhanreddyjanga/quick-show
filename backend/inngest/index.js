@@ -58,8 +58,8 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
     async ({ event , step }) => {
         const tenMinutesLater = new Date(Date.now() + 10 * 60 * 1000);
         await step.sleepUntil('wait-for-10-minutes',tenMinutesLater);
-        await step.run('check-payment-status',async (e)=>{
-            const bookingId = e.data.bookingId;
+        await step.run('check-payment-status',async ()=>{
+            const bookingId = event.data.bookingId;
             const booking = await Booking.findById(bookingId);
             // if payment is not made delete seats and delette booking
             if(!booking.isPaid){
@@ -75,5 +75,16 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
     }
 )
 
-export const functions = [syncUserCreation,syncUserDeletion,syncUserUpdate,releaseSeatsAndDeleteBooking];
+// const sendBookkingConfirmationEmail = inngest.createFunction(
+//     {id : 'send-booking-confirmation-email'},
+//     {event : 'app/show.booked'},
+//     async ({event,})
+// )
+
+export const functions = [
+    syncUserCreation,
+    syncUserDeletion,
+    syncUserUpdate,
+    releaseSeatsAndDeleteBooking
+];
 // mongodb+srv://admin:tCBoXnokRmpEZ9np@cluster0.pehw2br.mongodb.net/
