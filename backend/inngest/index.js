@@ -62,6 +62,7 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
         await step.run('check-payment-status',async ()=>{
             const bookingId = event.data.bookingId;
             const booking = await Booking.findById(bookingId);
+            console.log(booking._id , booking.isPaid);
             // if payment is not made delete seats and delette booking
             if(!booking.isPaid){
                 const show = await Show.findById(booking.show)
