@@ -1,8 +1,9 @@
 
-import { Inngest } from "inngest";
+import { Inngest, step } from "inngest";
 import User from "../models/user.js";
 import Booking from "../models/Booking.js";
 import Show from "../models/Show.js";
+import sendEmail from "../configs/nodeMailer.js";
 
 
 export const inngest = new Inngest({ id: "movie-ticket-booking" });
@@ -69,22 +70,65 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
                 })
                 show.markModified('occupiedSeats')
                 await show.save();
-                await Booking.findByIdAndDelete(booking.Id);
+                await Booking.findByIdAndDelete(booking._id);
             }
         })
     }
 )
 
-// const sendBookkingConfirmationEmail = inngest.createFunction(
-//     {id : 'send-booking-confirmation-email'},
-//     {event : 'app/show.booked'},
-//     async ({event,})
-// )
+const sendBookingConfirmationEmail = inngest.createFunction(
+    {id : 'send-booking-confirmation-email'},
+    {event : 'app/show.booked'},
+    async ({event,step}) => {
+        const bookingId = event.data;
+        const booking = await Booking.findById(bookingId).populate({
+            path : 'show',
+            populate : {path : 'movie', model : 'Movie'}
+        }).populate('user');
+
+        await sendEmail({
+            to : booking.user.email,
+            subject : `payment confirmation ${booking.show.movie.title} booked`,
+            body : `
+                    <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+                    <h2>Hi ${booking.user.name},</h2>
+
+                    <p>
+                        Your booking for <strong style="color: #F84565;">"${booking.show.movie.title}"</strong> is confirmed.
+                    </p>
+
+                    <p>
+                        <strong>Date:</strong> ${
+                        new Date(booking.show.showDateTime).toLocaleDateString('en-US', {
+                            timeZone: 'Asia/Kolkata'
+                        })
+                        }<br/>
+
+                        <strong>Time:</strong> ${
+                        new Date(booking.show.showDateTime).toLocaleTimeString('en-US', {
+                            timeZone: 'Asia/Kolkata'
+                        })
+                        }
+                    </p>
+
+                    <p>Enjoy the show! 🍿</p>
+
+                    <p>
+                        Thanks for booking with us!<br/>
+                        — QuickShow Team
+                    </p>
+                    </div>
+                    `
+        })
+
+    }
+)
 
 export const functions = [
     syncUserCreation,
     syncUserDeletion,
     syncUserUpdate,
-    releaseSeatsAndDeleteBooking
+    releaseSeatsAndDeleteBooking,
+    sendBookingConfirmationEmail
 ];
 // mongodb+srv://admin:tCBoXnokRmpEZ9np@cluster0.pehw2br.mongodb.net/
