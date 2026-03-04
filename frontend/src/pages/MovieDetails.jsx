@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Outlet, useNavigate, useParams } from 'react-router-dom'
 import { dummyDateTimeData, dummyShowsData } from '../assets/assets';
 import BlurCircle from '../components/BlurCircle';
 import { Heart, HeartIcon, PlayCircleIcon, StarIcon } from 'lucide-react'
@@ -50,6 +50,7 @@ function MovieDetails() {
   useEffect(()=>{
     getShow()
   },[id])
+  const otherShows = shows.filter(movie => movie._id != id);
 
   return show ?  (
     <div className='px-6 md:px-16 lg:px-40 pt-30 md:pt-50'>
@@ -99,8 +100,8 @@ function MovieDetails() {
         <p className='text-lg font-medium mt-20 mb-8'>You May Also Like</p>
         <div className='flex flex-wrap max-sm:justify-center gap-8'>
                 {
-                  shows.slice(0,4).map((movie,index)=>(
-                    <MovieCard movie={movie} key={index} />
+                  otherShows.slice(0,4).map((movie,index)=>(
+                      <MovieCard movie={movie} key={index} />
                   ))
                 }
         </div>
