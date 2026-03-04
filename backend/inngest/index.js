@@ -125,11 +125,120 @@ const sendBookingConfirmationEmail = inngest.createFunction(
     }
 )
 
+// ingest function to send remainders
+const sendShowRemainder = inngest.createFunction(
+    { id : "send-show-remainders" },
+    { cron : "0 */8 * * *" }, //every 8 hrs
+    async ({step}) => {
+        const now = new Date()
+        const in8hours = new Date(now.getTime() +  8 * 60 * 60 * 1000);
+        const windowStart = new Date( in8hours.getTime() - 10*60*1000)
+
+        // prepare remainder task
+        const remainderTasks = await step.run("prepare-remainder-tasks",async()=>{
+            const shows = await Show.find({
+                showDateTime : { $gte : windowStart, $lte : in8hours  }
+            }).populate('movie')
+            const tasks = []
+            for(const show of shows){
+                if(!show.movie || !show.occupiedSeats){
+                    continue
+                }
+                const userIds = [... new Set(Object.values(show.occupiedSeats))]
+                if(userIds.length === 0)continue;
+                const users = await User.find({_id : {$in : userIds}}).select('name email')
+
+                for(const user of users){
+                    tasks.push({
+                        userEmail : user.email,
+                        userName : user.name,
+                        movieTitle : show.movie.title,
+                        showTime : show.showDateTime
+                    })
+                }
+            }
+            return tasks;
+        })
+        if(remainderTasks.length == 0){
+            return {sent : 0, message : "NO remainders to send"}
+        }
+        // send remainder emails
+
+        const results = await step.run('all-remainders',async()=>{
+            return await Promise.allSettled(
+                remainderTasks.map(task => sendEmail({
+                    to : task.userEmail,
+                    subject : `Remainder : your movie ${task.movieTitle} starts soon`,
+                    body: `<div style="font-family: Arial, sans-serif; padding: 20px;">
+                            <h2>Hello ${task.userName},</h2>
+                            <p>This is a quick reminder that your movie:</p>
+                            <h3 style="color: #F84565;">"${task.movieTitle}"</h3>
+                            <p>
+                                is scheduled for <strong>${new Date(task.showTime)
+                                .toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' })}</strong> at
+                                <strong>${new Date(task.showTime)
+                                .toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata' })}</strong>.
+                            </p>
+                            <p>It starts in approximately <strong>8 hours</strong> - make sure you're ready!</p>
+                            <br/>
+                            <p>Enjoy the show!<br/>QuickShow Team</p>
+                            </div>` 
+
+                }))
+            )
+        })
+        const sent = results.filter(r => r.status === 'fulfilled')
+        const failed = results.length-sent
+
+        return{
+            sent,
+            failed,
+            message :  `sent ${ sent } remainder(s) , failed ${failed}`
+        }
+    }   
+)
+
+const sendNewShowNotification = inngest.createFunction(
+    { id : "send-new-notification" },
+    { event : "app/show.added" },
+    async({ event }) => {
+        const { movieTitle} = event.data;
+        const users = await User.find({});
+
+        for(const user of users){
+            const userEmail = user.email;
+            const userName = user.name; 
+            const subject = `new show added : ${movieTitle}`;
+            const body = `
+                        <div style="font-family: Arial, sans-serif; padding: 20px;">
+                            <h2>Hi ${userName},</h2>
+                            <p>We've just added a new show to our library:</p>
+                            <h3 style="color: #F84565;">"${movieTitle}"</h3>
+                            <p>Visit our website</p>
+                            <br/>
+                            <p>Thanks,<br/>QuickShow Team</p>
+                        </div>
+                        `;
+
+                        await sendEmail({
+                            to:userEmail,
+                            subject ,
+                            body
+                        })
+        }
+
+        return { message :"Notification sent" };
+        
+    }
+)
+
 export const functions = [
     syncUserCreation,
     syncUserDeletion,
     syncUserUpdate,
     releaseSeatsAndDeleteBooking,
-    sendBookingConfirmationEmail
+    sendBookingConfirmationEmail,
+    sendShowRemainder,
+    sendNewShowNotification
 ];
 // mongodb+srv://admin:tCBoXnokRmpEZ9np@cluster0.pehw2br.mongodb.net/
