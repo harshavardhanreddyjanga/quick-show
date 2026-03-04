@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import Loading from '../../components/Loading'
 import Title from '../../components/admin/Title'
 import { dummyShowsData } from '../../assets/assets'
-import { dateFormat } from '../../lib/DateFormat'
+import { dateFormat } from '../../lib/dateFormat'
 import { useAppContext } from '../../context/AppContext'
 
 function ListShows() {
