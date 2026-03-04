@@ -1,6 +1,8 @@
 
 import { Inngest } from "inngest";
 import User from "../models/user.js";
+import Booking from "../models/Booking.js";
+import Show from "../models/Show.js";
 
 
 export const inngest = new Inngest({ id: "movie-ticket-booking" });
@@ -48,6 +50,30 @@ const syncUserUpdate = inngest.createFunction(
     }
 )
 
+// inngest fn to cancel booking and release seats after 10 mins
 
-export const functions = [syncUserCreation,syncUserDeletion,syncUserUpdate];
+const releaseSeatsAndDeleteBooking = inngest.createFunction(
+    {id : 'release-seats-delete-booking'},
+    {event : "app/checkpayment" },
+    async ({ event , step }) => {
+        const tenMinutesLater = new Date(Date.now() + 10 * 60 * 1000);
+        await step.sleepUntil('wait-for-10-minutes',tenMinutesLater);
+        await step.run('check-payment-status',async ()=>{
+            const bookingId = e.data.bookingId;
+            const booking = await Booking.findById(bookingId);
+            // if payment is not made delete seats and delette booking
+            if(!booking.isPaid){
+                const show = await Show.findById(booking.show)
+                booking.bookedSeats.forEach((seat)=>{
+                    delete show.occupiedSeats[seat];
+                })
+                show.markModified('occupiedSeats')
+                await show.save();
+                await Booking.findByIdAndDelete(booking.Id);
+            }
+        })
+    }
+)
+
+export const functions = [syncUserCreation,syncUserDeletion,syncUserUpdate,releaseSeatsAndDeleteBooking];
 // mongodb+srv://admin:tCBoXnokRmpEZ9np@cluster0.pehw2br.mongodb.net/
